@@ -86,3 +86,35 @@ extension Logger {
     static let migration = Logger(subsystem: "com.apple.network", category: "migration")
 }
 #endif
+
+// MARK: - Reporting from small functions
+
+// Building a log message is many times the size of the arithmetic a small function performs, and
+// that code counts against the inliner's budget and occupies instruction footprint on the hot path
+// whether or not the message is ever emitted. A function that reports an unexpected condition
+// inline therefore stops being inlinable, and its callers pay for a diagnostic they never see.
+//
+// Reporting through these helpers keeps the message, and the logging metadata and
+// once-initialisation with it, in one out-of-line place. Callers keep a compare and a branch.
+// The names say so: being out of line is the point, not an implementation detail.
+//
+// The message is a `StaticString` so nothing is interpolated at the call site, and the values are
+// parameters rather than an autoclosure, which would put the interpolation back in the caller.
+
+#if os(Linux) || (NETWORK_EMBEDDED && !NETWORK_DRIVERKIT) || canImport(os) || NETWORK_DRIVERKIT
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+@inline(never)
+func outlinedLogError(_ message: StaticString) {
+    Logger.proto.error("\(message)")
+}
+
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+@inline(never)
+func outlinedLogError<First: FixedWidthInteger, Second: FixedWidthInteger>(
+    _ message: StaticString,
+    _ first: First,
+    _ second: Second
+) {
+    Logger.proto.error("\(message): \(first), \(second)")
+}
+#endif
