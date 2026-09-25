@@ -6880,23 +6880,6 @@ extension QUICConnection {
                     FrameRetireConnectionID(sequence: retiredCID.sequenceNumber)
                 )
             }
-
-            let success = withCurrentPath { path in
-                if path.dcid == retiredCID.connectionID {
-                    guard assignNewDCID(to: path) else {
-                        log.error("Asked to retire current DCID but could not allocate a new DCID")
-                        close(
-                            with:
-                                .internalError,
-                            "NEW_CONNECTION_ID: unable to allocate a new DCID",
-                            in: &eventContext
-                        )
-                        return false
-                    }
-                }
-                return true
-            }
-            guard success else { return false }
         }
 
         // An endpoint that receives a NEW_CONNECTION_ID frame with a sequence
@@ -6954,7 +6937,22 @@ extension QUICConnection {
             log.info("Attempt to add new CID that exceeds the configured cid limit (\(cidLimit))")
         }
 
-        return true
+        // Re-point the path only after the insert above: the CID this frame supplies may be
+        // the only replacement left for a DCID it retired.
+        return withCurrentPath { path in
+            if retiredCIDs.contains(where: { $0.connectionID == path.dcid }) {
+                guard assignNewDCID(to: path) else {
+                    log.error("Asked to retire current DCID but could not allocate a new DCID")
+                    close(
+                        with: .internalError,
+                        "NEW_CONNECTION_ID: unable to allocate a new DCID",
+                        in: &eventContext
+                    )
+                    return false
+                }
+            }
+            return true
+        }
     }
 
     // For inbound (local) CIDs
