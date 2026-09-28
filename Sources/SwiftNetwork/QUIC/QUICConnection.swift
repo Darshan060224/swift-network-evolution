@@ -491,12 +491,7 @@ public final class QUICConnection: ManyToManyApplicationStreamProtocol,
 
         self.timer = Timer(reference: self.reference, timerReference: timerReference, logPrefixer: logPrefixer)
         let ackTimerID = timer.insert(description: "ACK", timerNow: self.now) { firedAt in
-            // Consult with ack.timerFired to decide whether a delayed ACK needs to be sent. the
-            // send itself happens here, after its borrow of `self.ack` has ended.
-            if self.ack.timerFired(at: firedAt) {
-                self.sendFrames(delayedACK: true)
-                self.checkConnectionIdle(unackedPacketCount: self.ack.unackedPacketCount)
-            }
+            self.ack.timerFired(at: firedAt)
         }
         self.ack = Ack(connection: self, timerID: ackTimerID, logPrefixer: logPrefixer)
 
