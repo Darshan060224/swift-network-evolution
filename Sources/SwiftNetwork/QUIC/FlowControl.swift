@@ -254,7 +254,7 @@ struct FlowControlState: ~Copyable {
     fileprivate(set) var pendingOutboundBytesToSend: UInt64 = 0
 
     // Number of bytes that can be sent to the peer before the maximum is reached.
-    func remainingOutboundBytesAllowed() -> UInt64 {
+    var remainingOutboundBytesAllowed: UInt64 {
         guard outboundMaxData > totalOutboundBytesSent else {
             return 0
         }
@@ -573,8 +573,8 @@ extension QUICStreamInstance {
     }
 
     func availableRemoteReceiveWindow(for connection: QUICConnection) -> UInt64 {
-        let connectionFlowControl = connection.flowControlState.remainingOutboundBytesAllowed()
-        let streamFlowControl = self.flowControlState.remainingOutboundBytesAllowed()
+        let connectionFlowControl = connection.flowControlState.remainingOutboundBytesAllowed
+        let streamFlowControl = self.flowControlState.remainingOutboundBytesAllowed
         return min(connectionFlowControl, streamFlowControl)
     }
 
