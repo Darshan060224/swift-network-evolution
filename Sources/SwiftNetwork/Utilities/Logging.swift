@@ -110,6 +110,12 @@ func outlinedLogError(_ message: StaticString) {
 
 @available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 @inline(never)
+func outlinedLogError<Value: FixedWidthInteger>(_ message: StaticString, _ value: Value) {
+    Logger.proto.error("\(message): \(value)")
+}
+
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+@inline(never)
 func outlinedLogError<First: FixedWidthInteger, Second: FixedWidthInteger>(
     _ message: StaticString,
     _ first: First,
@@ -117,4 +123,38 @@ func outlinedLogError<First: FixedWidthInteger, Second: FixedWidthInteger>(
 ) {
     Logger.proto.error("\(message): \(first), \(second)")
 }
+
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+@inline(never)
+func outlinedLogError<First: FixedWidthInteger, Second: FixedWidthInteger, Third: FixedWidthInteger>(
+    _ message: StaticString,
+    _ first: First,
+    _ second: Second,
+    _ third: Third
+) {
+    Logger.proto.error("\(message): \(first), \(second), \(third)")
+}
+
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+@inline(never)
+func outlinedLogFault(_ message: StaticString) {
+    Logger.proto.fault("\(message)")
+}
+
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+@inline(never)
+func outlinedLogFault<Value: FixedWidthInteger>(_ message: StaticString, _ value: Value) {
+    Logger.proto.fault("\(message): \(value)")
+}
+
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+@inline(never)
+func outlinedLogFault<First: FixedWidthInteger, Second: FixedWidthInteger>(
+    _ message: StaticString,
+    _ first: First,
+    _ second: Second
+) {
+    Logger.proto.fault("\(message): \(first), \(second)")
+}
+
 #endif
