@@ -22,6 +22,10 @@ import XCTest
 @_spi(Essentials) @_spi(ProtocolProvider) import Network
 #endif
 
+#if canImport(SwiftNetworkTestHarness)
+@_spi(TestHarness) @_spi(Essentials) @_spi(ProtocolProvider) import SwiftNetworkTestHarness
+#endif
+
 #if IMPORT_SWIFTTLS
 #if EXPORT_SWIFTTLS
 @_spi(SwiftTLSOptions) @_spi(SwiftTLSProtocol) import SwiftTLS
@@ -109,6 +113,56 @@ final class SwiftNetworkQUICHarnessTests: NetTestCase {
             clientOptions: clientOptions
         )
     }
+
+    // A server that advertises more than 2^60 initial bidirectional streams violates the
+    // transport parameter limits, so the client closes from `reportReady` when TLS reports the
+    // handshake as connected. Here that happens while the client is processing the server's
+    // flight, so the close is deferred until the packet has been handled.
+    func testQUICHandshakeWithInvalidServerTransportParameters() {
+        let serverOptions = QUICProtocol.options()
+        serverOptions.connectionOptions.initialMaxStreamsBidirectional = Constants.maxStreamLimit + 1
+
+        QUICTestHarness().runQUICTest(
+            expectHandshakeError: .init(
+                quicTransportError: QUICTransportError(.transportParameterError, "initial FC over limit")
+            ),
+            serverOptions: serverOptions
+        )
+    }
+
+    #if EXPORT_SWIFTTLS
+    // The same invalid transport parameters, but the client verifies the server asynchronously.
+    // TLS then completes the handshake from its own async continuation rather than from inside
+    // the client's packet processing, so `reportReady`, and the close it raises, runs while crypto
+    // is still handling the connected event from TLS.
+    func testQUICHandshakeWithInvalidServerTransportParametersAfterAsyncVerification() {
+        let serverOptions = QUICProtocol.options()
+        serverOptions.connectionOptions.initialMaxStreamsBidirectional = Constants.maxStreamLimit + 1
+
+        let clientOptions = QUICProtocol.options()
+        var tlsOptions = clientOptions.tlsOptions
+        tlsOptions.tlsOptions.asyncVerifier = AsyncVerifier(availableCertificateTypes: [.rawPublicKey]) { info in
+            guard let deliverResult = info.deliverResult else {
+                return .invalid(reason: "No way to deliver an async result")
+            }
+            // Deliver from off the context, as a real verifier would; the TLS instance has to
+            // hop back onto the context itself.
+            DispatchQueue.global().async {
+                deliverResult(.valid)
+            }
+            return .waiting
+        }
+        clientOptions.tlsOptions = tlsOptions
+
+        QUICTestHarness().runQUICTest(
+            expectHandshakeError: .init(
+                quicTransportError: QUICTransportError(.transportParameterError, "initial FC over limit")
+            ),
+            clientOptions: clientOptions,
+            serverOptions: serverOptions
+        )
+    }
+    #endif
 
     #if EXPORT_SWIFTTLS
     func testQUICHandshakeForceAES128() {

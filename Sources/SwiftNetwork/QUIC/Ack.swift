@@ -506,8 +506,8 @@ struct Ack: ~Copyable, PrefixedLoggable, NonCopyableTimerUser {
         self.applicationAckSpace = AckSpace(logPrefixer: logPrefixer)
     }
 
-    mutating func reset() {
-        connection?.timer.stop()
+    mutating func reset(in eventContext: inout NetworkContext.EventContext) {
+        connection?.timer.stop(in: &eventContext)
         connection = nil
     }
 
@@ -517,22 +517,23 @@ struct Ack: ~Copyable, PrefixedLoggable, NonCopyableTimerUser {
         }
     }
 
-    mutating func timerFired(at timeNow: NetworkClock.Instant) {
+    mutating func timerFired(at timeNow: NetworkClock.Instant, in eventContext: inout NetworkContext.EventContext) {
         log.datapath("Delayed ACK timer fired")
         if let connection = connection {
             if sendPending(
                 isAckSet: connection.isAckSet,
                 setAckFrame: connection.scheduleAckFrame,
                 ecn: connection.ecn,
-                now: timeNow
+                now: timeNow,
+                in: &eventContext
             ) {
-                connection.sendFrames(delayedACK: true)
+                connection.sendFrames(delayedACK: true, in: &eventContext)
 
                 // An ACK-only packet is not ack-eliciting, so once it is sent
                 // there is nothing left in pending items or in recovery to
                 // observe. This is the only place that can return the
                 // connection to idle after a delayed ACK.
-                connection.checkConnectionIdle(unackedPacketCount: unackedPacketCount)
+                connection.checkConnectionIdle(unackedPacketCount: unackedPacketCount, in: &eventContext)
             }
         }
     }
@@ -701,7 +702,8 @@ struct Ack: ~Copyable, PrefixedLoggable, NonCopyableTimerUser {
         isAckSet: (PacketNumberSpace) -> Bool,
         setAckFrame: (PacketNumberSpace, consuming QUICFrame, Bool) -> Void,
         ecn: borrowing ECN,
-        now: NetworkClock.Instant
+        now: NetworkClock.Instant,
+        in eventContext: inout NetworkContext.EventContext
     ) -> Bool {
         guard let connection else {
             return false
@@ -719,7 +721,8 @@ struct Ack: ~Copyable, PrefixedLoggable, NonCopyableTimerUser {
             connection.timer.reschedule(
                 identifier: timerID,
                 fromNow: .zero,
-                timerNow: now
+                timerNow: now,
+                in: &eventContext
             )
             timerScheduled = false
         }
@@ -759,7 +762,7 @@ struct Ack: ~Copyable, PrefixedLoggable, NonCopyableTimerUser {
         )
     }
 
-    mutating func scheduleDelayedAck() {
+    mutating func scheduleDelayedAck(in eventContext: inout NetworkContext.EventContext) {
         // ACK timer is already scheduled
         if timerScheduled {
             return
@@ -771,7 +774,8 @@ struct Ack: ~Copyable, PrefixedLoggable, NonCopyableTimerUser {
                 connection.timer.reschedule(
                     identifier: timerID,
                     fromNow: maxDelay,
-                    timerNow: connection.now
+                    timerNow: connection.now,
+                    in: &eventContext
                 )
             }
         }
@@ -782,7 +786,8 @@ struct Ack: ~Copyable, PrefixedLoggable, NonCopyableTimerUser {
         connectionWindow: Int,
         isAckSet: (PacketNumberSpace) -> Bool,
         setAckFrame: (PacketNumberSpace, consuming QUICFrame, Bool) -> Void,
-        ecn: borrowing ECN
+        ecn: borrowing ECN,
+        in eventContext: inout NetworkContext.EventContext
     ) -> Bool {
         // If the peer asked us to, delay the ACK.
         // Otherwise, delay the ACK if we are not forcing ACKs immediately
@@ -804,7 +809,7 @@ struct Ack: ~Copyable, PrefixedLoggable, NonCopyableTimerUser {
                     && unackedPacketCount < packetThreshold
                     && now < lastSentTime.advanced(by: delayedTime))
         {
-            scheduleDelayedAck()
+            scheduleDelayedAck(in: &eventContext)
             return false
         } else {
             log.datapath("Sending ACKs immediately")
@@ -822,7 +827,8 @@ struct Ack: ~Copyable, PrefixedLoggable, NonCopyableTimerUser {
         connectionWindow: Int,
         isAckSet: (PacketNumberSpace) -> Bool,
         setAckFrame: (PacketNumberSpace, consuming QUICFrame, Bool) -> Void,
-        ecn: borrowing ECN
+        ecn: borrowing ECN,
+        in eventContext: inout NetworkContext.EventContext
     ) -> Bool {
         if unackedPacketCount < 1 {
             // If there are no unacked packets, do nothing
@@ -835,7 +841,8 @@ struct Ack: ~Copyable, PrefixedLoggable, NonCopyableTimerUser {
                 connectionWindow: connectionWindow,
                 isAckSet: isAckSet,
                 setAckFrame: setAckFrame,
-                ecn: ecn
+                ecn: ecn,
+                in: &eventContext
             )
         }
     }
