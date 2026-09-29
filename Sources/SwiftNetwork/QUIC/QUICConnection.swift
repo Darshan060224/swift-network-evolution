@@ -1410,7 +1410,7 @@ public final class QUICConnection: ManyToManyApplicationStreamProtocol,
             }
             initialPath.setSCID(scid)
             if !isServer {
-                initialPath.assignDCID(originalDCID)
+                initialPath.assignDCID(originalDCID, in: &eventContext)
             }
             setInitialMSS(on: initialPath)
             currentPath = initialPath
@@ -1771,7 +1771,7 @@ public final class QUICConnection: ManyToManyApplicationStreamProtocol,
         // Attempt path validation if this is the first packet that we have received on this path.
         if isServerConnection, !path.isValidated, path != currentPath {
             unvalidatedPath = true
-            path.beginValidation()
+            path.beginValidation(in: &eventContext)
         }
 
         // If we haven't derived the INITIAL keys, try to do that now.
@@ -2181,7 +2181,7 @@ public final class QUICConnection: ManyToManyApplicationStreamProtocol,
         state.change(to: .retryReceived, logIDString: logIDString)
         retryReceived = true
         retrySCID = scid
-        path.assignDCID(scid)
+        path.assignDCID(scid, in: &eventContext)
         // NOTE: similar to packet builder setting the token to be used with initial / LH packets
         initialToken = token
         recovery.resetPNSpace(packetNumberSpace: .initial, connection: self)
@@ -2282,7 +2282,7 @@ public final class QUICConnection: ManyToManyApplicationStreamProtocol,
 
                 withCurrentPath { path in
                     // Use the client's SCID as our DCID.
-                    path.assignDCID(peerSourceConnectionID)
+                    path.assignDCID(peerSourceConnectionID, in: &eventContext)
 
                     // The server SCID should already be set
                     setCIDsOnLocalTransportParameters(path: path)
@@ -2326,7 +2326,7 @@ public final class QUICConnection: ManyToManyApplicationStreamProtocol,
                 log.info("New SCID: \(scid)")
                 currentPath?.setSCID(scid)
                 log.info("New DCID: \(dcid)")
-                currentPath?.assignDCID(dcid)
+                currentPath?.assignDCID(dcid, in: &eventContext)
                 protector.deriveInitialSecrets(destinationCID: dcid)
             } else {
                 close(with: .internalError, "version negotiation failed", in: &eventContext)
@@ -2349,7 +2349,7 @@ public final class QUICConnection: ManyToManyApplicationStreamProtocol,
             // Peer's DCID will be saved to the array once we are
             // connected.
             if let peerSourceConnectionID = packet.sourceConnectionID {
-                withCurrentPath { $0.assignDCID(peerSourceConnectionID) }
+                withCurrentPath { $0.assignDCID(peerSourceConnectionID, in: &eventContext) }
             }
         // NOTE: clients that receive an Initial packet
         // with a non-zero Token Length field MUST
@@ -2444,7 +2444,7 @@ public final class QUICConnection: ManyToManyApplicationStreamProtocol,
             return true
         }
 
-        if assignNewDCID(to: path), let pathDCID = path.dcid {
+        if assignNewDCID(to: path, in: &eventContext), let pathDCID = path.dcid {
             log.notice("Using new DCID: \(pathDCID)")
         }
 
@@ -2453,7 +2453,7 @@ public final class QUICConnection: ManyToManyApplicationStreamProtocol,
         return true
     }
 
-    func assignNewDCID(to path: QUICPath) -> Bool {
+    func assignNewDCID(to path: QUICPath, in eventContext: inout NetworkContext.EventContext) -> Bool {
         var eligibleCID: ManagedConnectionID?
 
         // Look for the preferred address CID if applicable
@@ -2483,7 +2483,7 @@ public final class QUICConnection: ManyToManyApplicationStreamProtocol,
             return false
         }
         remoteCIDs.markUsed(eligibleCID)
-        path.assignDCID(eligibleCID.connectionID)
+        path.assignDCID(eligibleCID.connectionID, in: &eventContext)
         return true
     }
 
@@ -6417,7 +6417,7 @@ extension QUICConnection {
         case .retireConnectionID(let frame):
             return processRetireConnectionIDFrame(frame, in: &eventContext)
         case .pathChallenge(let frame):
-            return handlePathChallengeFrame(frame, path: path)
+            return handlePathChallengeFrame(frame, path: path, in: &eventContext)
         case .pathResponse(let frame):
             return handlePathChallengeResponseFrame(frame, path: path, in: &eventContext)
         case .connectionClose(let frame):
@@ -6883,7 +6883,7 @@ extension QUICConnection {
 
             let success = withCurrentPath { path in
                 if path.dcid == retiredCID.connectionID {
-                    guard assignNewDCID(to: path) else {
+                    guard assignNewDCID(to: path, in: &eventContext) else {
                         log.error("Asked to retire current DCID but could not allocate a new DCID")
                         close(
                             with:
@@ -7062,9 +7062,10 @@ extension QUICConnection {
     @discardableResult
     func handlePathChallengeFrame(
         _ frame: FramePathChallenge,
-        path: QUICPath
+        path: QUICPath,
+        in eventContext: inout NetworkContext.EventContext
     ) -> Bool {
-        path.handlePathChallenge(frame.data)
+        path.handlePathChallenge(frame.data, in: &eventContext)
         return true
     }
 

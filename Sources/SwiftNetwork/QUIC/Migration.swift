@@ -118,7 +118,7 @@ struct Migration: ~Copyable {
         }
 
         guard path.isValidated else {
-            path.beginValidation()
+            path.beginValidation(in: &eventContext)
             path.migrationPending = true
             return
         }
@@ -218,7 +218,7 @@ extension QUICConnection {
                 path.changeState(to: .routeEstablished)
             }
             if isServer, path != currentPath, !path.isValidated {
-                path.beginValidation()
+                path.beginValidation(in: &eventContext)
                 sendFrames(on: path, in: &eventContext)
                 migration.resetTimer(now: self.now, connection: self, in: &eventContext)
             }

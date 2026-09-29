@@ -390,7 +390,7 @@ public final class QUICPath: MultiplexingDatagramPath<
         )
     }
 
-    func assignDCID(_ dcid: QUICConnectionID) {
+    func assignDCID(_ dcid: QUICConnectionID, in eventContext: inout NetworkContext.EventContext) {
         self.dcid = dcid
         if case .routeEstablished = state {
             changeState(to: .cidAssigned)
@@ -406,7 +406,8 @@ public final class QUICPath: MultiplexingDatagramPath<
                 )
                 parentProtocol.deliverNetworkProtocolEvent(
                     flow: .allFlows,
-                    event: .init(quicEvent: .pathCIDAssigned(pathInfo))
+                    event: .init(quicEvent: .pathCIDAssigned(pathInfo)),
+                    in: &eventContext
                 )
             }
         }
@@ -547,20 +548,20 @@ public final class QUICPath: MultiplexingDatagramPath<
         #endif
     }
 
-    func handlePathChallenge(_ challenge: UInt64) {
+    func handlePathChallenge(_ challenge: UInt64, in eventContext: inout NetworkContext.EventContext) {
         log.debug("Path challenge received: \(challenge)")
 
         // Save the challenge, to schedule a response
         pendingInboundChallenges.append(challenge)
 
         // Initiate probing if needed
-        beginValidation()
+        beginValidation(in: &eventContext)
     }
 
-    func beginValidation(ifNecessary: Bool = true) {
+    func beginValidation(ifNecessary: Bool = true, in eventContext: inout NetworkContext.EventContext) {
         if case .routeEstablished = state {
             // The route is established, but needs CID allocation
-            guard parentProtocol.assignNewDCID(to: self) else {
+            guard parentProtocol.assignNewDCID(to: self, in: &eventContext) else {
                 log.error("Failed to assign remote CID to path")
                 return
             }
