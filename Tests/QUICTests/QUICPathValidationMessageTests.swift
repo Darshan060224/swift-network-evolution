@@ -60,7 +60,7 @@ class QUICPathValidationMessageTests: XCTestCase {
         // challenge received from a path that is not validated
         let challenge = FramePathChallenge(data: 1)
         XCTAssertEqual(path.challengesSent, 0)
-        connection.context.onQueue {
+        let _ = connection.context.onQueue {
             connection.fromExternal { eventContext in
                 connection.handlePathChallengeFrame(challenge, path: path, in: &eventContext)
             }
@@ -72,7 +72,7 @@ class QUICPathValidationMessageTests: XCTestCase {
         // challenge received on a path that is validated, should just generate response
         path.changeState(to: .validated)
         let challenge2 = FramePathChallenge(data: 2)
-        connection.context.onQueue {
+        let _ = connection.context.onQueue {
             connection.fromExternal { eventContext in
                 connection.handlePathChallengeFrame(challenge2, path: path, in: &eventContext)
             }
