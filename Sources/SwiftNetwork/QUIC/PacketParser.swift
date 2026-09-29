@@ -33,10 +33,10 @@ internal import os
 struct PacketParser: ~Copyable, PrefixedLoggable {
 
     enum LongPacketTypes: UInt8 {
-        case initial    = 0x0
-        case zeroRTT    = 0x1
-        case handshake  = 0x2
-        case retry      = 0x3
+        case initial = 0x0
+        case zeroRTT = 0x1
+        case handshake = 0x2
+        case retry = 0x3
 
         init?(value: UInt8) {
             switch value {
@@ -667,7 +667,8 @@ struct PacketParser: ~Copyable, PrefixedLoggable {
             return false
         }
         guard let packetType = LongPacketTypes(value: (firstOctet & 0x30) >> 4),
-              packetType == .initial else {
+            packetType == .initial
+        else {
             log.error("Received packet when expecting Initial with retry token")
             return false
         }
