@@ -22,9 +22,15 @@ import XCTest
 @_spi(Essentials) @_spi(ProtocolProvider) @testable import Network
 #endif
 
+#if canImport(SwiftNetworkTestHarness)
+@_spi(TestHarness) @_spi(Essentials) @_spi(ProtocolProvider) import SwiftNetworkTestHarness
+#endif
+
 #if QlogOutput
+@available(Network 0.1.0, *)
 let qlogTestsLogPrefixer = LogPrefixer("[QLogTests]")
 
+@available(Network 0.1.0, *)
 final class QLogTests: XCTestCase {
     var qlog: QLog = QLog(context: NetworkContext(identifier: "QLogTests"))
 

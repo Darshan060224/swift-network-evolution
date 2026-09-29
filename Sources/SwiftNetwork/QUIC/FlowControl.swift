@@ -254,7 +254,7 @@ struct FlowControlState: ~Copyable {
     fileprivate(set) var pendingOutboundBytesToSend: UInt64 = 0
 
     // Number of bytes that can be sent to the peer before the maximum is reached.
-    fileprivate var remainingOutboundBytesAllowed: UInt64 {
+    var remainingOutboundBytesAllowed: UInt64 {
         guard outboundMaxData > totalOutboundBytesSent else {
             return 0
         }
@@ -264,6 +264,11 @@ struct FlowControlState: ~Copyable {
     mutating func resetSentBytes() {
         totalOutboundBytesSent = 0
         pendingOutboundBytesToSend = 0
+    }
+
+    mutating func recordSent(_ bytes: UInt64) {
+        pendingOutboundBytesToSend -= bytes
+        totalOutboundBytesSent += bytes
     }
 
     // Pass false for connection-wide values
@@ -307,10 +312,6 @@ extension QUICConnection {
                 pendingItems.dataBlocked = true
             }
         }
-    }
-
-    var availableRemoteReceiveWindow: UInt64 {
-        flowControlState.remainingOutboundBytesAllowed
     }
 
     func updateOutboundMaxData(to newValue: UInt64) -> Bool {
@@ -389,7 +390,10 @@ extension QUICConnection {
         sendInboundFlowControlCredit()
     }
 
-    func updateLastReceivedOffsetForZombie(lastOffsetDelta: UInt64) {
+    func updateLastReceivedOffsetForZombie(
+        lastOffsetDelta: UInt64,
+        in eventContext: inout NetworkContext.EventContext
+    ) {
         let connectionMaxData = flowControlState.inboundMaxData
         let connectionCurrentLargestData = flowControlState.largestInboundByteOffsetReceived
         guard connectionMaxData >= connectionCurrentLargestData,
@@ -398,7 +402,7 @@ extension QUICConnection {
             log.error(
                 "Received final size adjustment \(lastOffsetDelta) which had exceeds connection flow control limits"
             )
-            close(with: .flowControlError, "exceeded flow control limits")
+            close(with: .flowControlError, "exceeded flow control limits", in: &eventContext)
             return
         }
         // This cannot overflow, since the value has been just checked
@@ -438,16 +442,16 @@ extension QUICStreamInstance {
         precondition(bytes <= flowControlState.pendingOutboundBytesToSend)
         precondition(bytes <= connection.flowControlState.pendingOutboundBytesToSend)
 
-        flowControlState.pendingOutboundBytesToSend -= bytes
-        flowControlState.totalOutboundBytesSent += bytes
-        connection.flowControlState.pendingOutboundBytesToSend -= bytes
-        connection.flowControlState.totalOutboundBytesSent += bytes
+        flowControlState.recordSent(bytes)
+        connection.flowControlState.recordSent(bytes)
 
         // Draining can reopen a permit that transient backpressure latched to 0
         if self.maximumStreamDataSize == 0 {
             updateOutboundFlowControlCredit(connection: connection)
             if self.maximumStreamDataSize > 0 {
-                upper.deliverOutboundRoomAvailableEvent(reference)
+                // The packet-building path does not carry the event context, so the notification
+                // is queued and delivered once the send that reopened the permit completes.
+                connection.queueOutboundRoomAvailableEvent(for: self)
             }
         }
     }
@@ -464,7 +468,7 @@ extension QUICStreamInstance {
         if flowControlState.totalOutboundBytesSent >= flowControlState.outboundMaxData {
             if !self.hasSentDataBlocked {
                 self.hasSentDataBlocked = true
-                pendingItems.appendStreamDataBlockedFlow(self.identifier)
+                pendingItems.appendStreamDataBlockedFlow(self.flowIdentifier)
             }
         }
     }
@@ -563,7 +567,7 @@ extension QUICStreamInstance {
                 log.datapath(
                     "Updating MAX_STREAM_DATA for \(streamID!.value) to \(flowControlState.inboundMaxData)"
                 )
-                connection.applicationPendingItems.appendMaxStreamDataFlow(self.identifier)
+                connection.applicationPendingItems.appendMaxStreamDataFlow(self.flowIdentifier)
                 hasAdvertisedMaxStreamData = true
                 sendConnectionCredit = true
             }
@@ -577,10 +581,6 @@ extension QUICStreamInstance {
         let connectionFlowControl = connection.flowControlState.remainingOutboundBytesAllowed
         let streamFlowControl = self.flowControlState.remainingOutboundBytesAllowed
         return min(connectionFlowControl, streamFlowControl)
-    }
-
-    var availableRemoteReceiveWindow: UInt64 {
-        availableRemoteReceiveWindow(for: parentProtocol)
     }
 
     func updateOutboundMaxData(to newValue: UInt64) -> Bool {
@@ -662,7 +662,8 @@ extension QUICStreamInstance {
     @inline(always)
     func updateLastReceivedOffset(
         to newLastReceivedOffset: UInt64,
-        connection: QUICConnection
+        connection: QUICConnection,
+        in eventContext: inout NetworkContext.EventContext
     ) -> UInt64? {
         let currentValue = flowControlState.largestInboundByteOffsetReceived
         guard newLastReceivedOffset >= currentValue else { return nil }
@@ -674,7 +675,11 @@ extension QUICStreamInstance {
             log.error(
                 "Received final size \(newLastReceivedOffset) which had exceeds stream flow control limits"
             )
-            connection.close(with: .flowControlError, "exceeded stream flow control limits")
+            connection.close(
+                with: .flowControlError,
+                "exceeded stream flow control limits",
+                in: &eventContext
+            )
             return nil
         }
 
@@ -687,7 +692,11 @@ extension QUICStreamInstance {
             log.error(
                 "Received final size \(newLastReceivedOffset) which had exceeds connection flow control limits"
             )
-            connection.close(with: .flowControlError, "exceeded flow control limits")
+            connection.close(
+                with: .flowControlError,
+                "exceeded flow control limits",
+                in: &eventContext
+            )
             return nil
         }
         // This cannot overflow, since the value has been just checked
