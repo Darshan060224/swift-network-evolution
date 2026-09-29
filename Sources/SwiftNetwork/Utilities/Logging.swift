@@ -157,4 +157,20 @@ func outlinedLogFault<First: FixedWidthInteger, Second: FixedWidthInteger>(
     Logger.proto.fault("\(message): \(first), \(second)")
 }
 
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+@inline(never)
+func outlinedLogFault<First: FixedWidthInteger, Second: FixedWidthInteger, Third: FixedWidthInteger>(
+    _ message: StaticString,
+    _ first: First,
+    _ second: Second,
+    _ third: Third
+) {
+    Logger.proto.fault("\(message): \(first), \(second), \(third)")
+}
+
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+@inline(never)
+func outlinedLogInfo(_ message: StaticString) {
+    Logger.proto.info("\(message)")
+}
 #endif
