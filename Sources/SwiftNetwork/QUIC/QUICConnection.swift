@@ -2811,8 +2811,8 @@ public final class QUICConnection: ManyToManyApplicationStreamProtocol,
             }
         }
         var protocolEstablishmentReport = ProtocolEstablishmentReport(
-            handshakeMilliseconds: handshakeDuration,
-            handshakeRTTMilliseconds: handshakeRTT,
+            handshakeDuration: handshakeDuration,
+            handshakeRTT: handshakeRTT,
             protocolIdentifier: QUICConnectionProtocol.identifier,
             clientAccurateECNState: clientAccurateECNState
         )
