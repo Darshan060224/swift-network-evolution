@@ -22,19 +22,12 @@ import XCTest
 @_spi(Essentials) @_spi(ProtocolProvider) @testable import Network
 #endif
 
-#if canImport(SwiftNetworkTestHarness)
-@_spi(TestHarness) @_spi(Essentials) @_spi(ProtocolProvider) import SwiftNetworkTestHarness
-#endif
-
 @available(Network 0.1.0, *)
 let connectionIDRotationTestsLogPrefixer: LogPrefixer = LogPrefixer("[ConnectionIDRotationTests]")
 
 @available(Network 0.1.0, *)
 final class ConnectionIDRotationTests: XCTestCase {
     var connection = QUICConnection(context: .implicitContext)
-    // The base linkages are storage-backed, so lower harnesses have to come from storage
-    // rather than being wrapped in a bare linkage.
-    let storage = TestNetworkProtocolStorage(context: .implicitContext)
 
     override func setUp() {
         let expectation = XCTestExpectation()
@@ -58,31 +51,15 @@ final class ConnectionIDRotationTests: XCTestCase {
         self.connection.multiplexingPaths.removeAll()
     }
 
-    // Builds a path that is open for sending, backed by a lower harness, with its DCID
-    // registered in `remoteCIDs` so it mirrors an active path using that CID. The path is
-    // registered in `multiplexingPaths` so `tearDown` releases it.
+    // Builds a path with `dcid` assigned and registered in `remoteCIDs`, so it mirrors an active
+    // path using that CID. Processing NEW_CONNECTION_ID frames doesn't send anything, so the path
+    // needs no lower protocol. The path is registered in `multiplexingPaths` so `tearDown`
+    // releases it.
     private func makePath(dcid: QUICConnectionID, sequenceNumber: UInt64, used: Bool) -> QUICPath {
-        let (lower, lowerLinkage) = storage.createDatagramLowerHarness(
-            identifier: "\(sequenceNumber)",
-            context: .implicitContext
-        )
-        lower.fromExternal { eventContext in
-            lower.connect(in: &eventContext)
-        }
         // Every caller builds its paths from inside `context.async`, so this runs on the context.
-        var path = QUICPath.makeFromExternalTest(parent: self.connection)
+        let path = QUICPath.makeFromExternalTest(parent: self.connection)
         path.set(interface: nil, priority: 1, isInitial: true)  // -> .routeEstablished
         path.assignDCID(dcid)  // -> .cidAssigned (open for sending)
-        // The path is a framework protocol, so it is bound through the base form of the
-        // harness's linkage.
-        _ = try? path.attachLowerProtocol(lowerLinkage.base)
-        try? lowerLinkage.base.invokeAttachUpperProtocol(
-            path.asUpperLinkage(),
-            remote: nil,
-            local: nil,
-            parameters: nil,
-            path: nil
-        )
         try? connection.remoteCIDs.insert(
             sequenceNumber: sequenceNumber,
             connectionID: dcid,
