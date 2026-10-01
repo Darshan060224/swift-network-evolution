@@ -301,7 +301,12 @@ public struct Frame: ~Copyable {
         guard newStart <= effectiveBufferLength - newEnd else {
             let effectiveLength = effectiveBufferLength
             #if !DisableErrorLogging
-            outlinedLogError("Claiming bytes failed, start is beyond end; start, effective length, end", newStart, effectiveLength, newEnd)
+            outlinedLogError(
+                "Claiming bytes failed, start is beyond end; start, effective length, end",
+                newStart,
+                effectiveLength,
+                newEnd
+            )
             #endif
             return false
         }
@@ -854,7 +859,11 @@ public struct Frame: ~Copyable {
             guard length >= 0 else { return }
             guard length <= aggregateBufferLength else {
                 let existingLength = aggregateBufferLength
-                outlinedLogFault("Aggregate buffer length cannot remove requested bytes; existing, requested", existingLength, length)
+                outlinedLogFault(
+                    "Aggregate buffer length cannot remove requested bytes; existing, requested",
+                    existingLength,
+                    length
+                )
                 aggregateBufferLength = 0
                 return
             }
