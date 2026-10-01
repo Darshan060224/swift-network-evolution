@@ -647,28 +647,40 @@ struct Protector: ~Copyable, PrefixedLoggable {
         deriveInitialSecrets(destinationCID: destinationCID)
     }
 
-    private func encode(label: String, secretLength: Int) -> [UInt8] {
+    /// Encodes the HKDF label for `label` and passes it to `body`.
+    ///
+    /// The encoding only has to last for one expansion, so it is built in temporary storage rather than an array.
+    private func withEncodedLabel<Result>(
+        _ label: String,
+        secretLength: Int,
+        _ body: (UnsafeRawBufferPointer) -> Result
+    ) -> Result {
         let quicLabel = "tls13 "
         let labelLength = quicLabel.utf8.count + label.utf8.count
         // 2 is for the length, 1 byte prefix for each label, 1 byte for context
         let totalLength = 2 + 1 + labelLength + 1
-        var result = [UInt8](repeating: 0, count: totalLength)
-        var index = 0
+        return withUnsafeTemporaryAllocation(byteCount: totalLength, alignment: 1) { result in
+            var index = 0
 
-        // Encode the length of the secret
-        result[index] = UInt8((secretLength >> 8) & 0xff)
-        index += 1
-        result[index] = UInt8(secretLength & 0xff)
-        index += 1
-        result[index] = UInt8(labelLength)
-        index += 1
-        result.replaceSubrange(index..<index + quicLabel.utf8.count, with: quicLabel.utf8)
-        index += quicLabel.utf8.count
-        result.replaceSubrange(index..<index + label.utf8.count, with: label.utf8)
-        index += label.utf8.count
-        result[index] = 0
+            // Encode the length of the secret
+            result[index] = UInt8((secretLength >> 8) & 0xff)
+            index += 1
+            result[index] = UInt8(secretLength & 0xff)
+            index += 1
+            result[index] = UInt8(labelLength)
+            index += 1
+            for byte in quicLabel.utf8 {
+                result[index] = byte
+                index += 1
+            }
+            for byte in label.utf8 {
+                result[index] = byte
+                index += 1
+            }
+            result[index] = 0
 
-        return result
+            return body(UnsafeRawBufferPointer(result))
+        }
     }
 
     private func deriveWithSHA256(
@@ -676,12 +688,13 @@ struct Protector: ~Copyable, PrefixedLoggable {
         label: String,
         outputSecretLength: Int
     ) -> SymmetricKey {
-        let encodedLabel = encode(label: label, secretLength: outputSecretLength)
-        return HKDF<SHA256>.expand(
-            pseudoRandomKey: inputSecret,
-            info: encodedLabel,
-            outputByteCount: outputSecretLength
-        )
+        withEncodedLabel(label, secretLength: outputSecretLength) { encodedLabel in
+            HKDF<SHA256>.expand(
+                pseudoRandomKey: inputSecret,
+                info: encodedLabel,
+                outputByteCount: outputSecretLength
+            )
+        }
     }
 
     private func deriveWithSHA384(
@@ -689,12 +702,13 @@ struct Protector: ~Copyable, PrefixedLoggable {
         label: String,
         outputSecretLength: Int
     ) -> SymmetricKey {
-        let encodedLabel = encode(label: label, secretLength: outputSecretLength)
-        return HKDF<SHA384>.expand(
-            pseudoRandomKey: inputSecret,
-            info: encodedLabel,
-            outputByteCount: outputSecretLength
-        )
+        withEncodedLabel(label, secretLength: outputSecretLength) { encodedLabel in
+            HKDF<SHA384>.expand(
+                pseudoRandomKey: inputSecret,
+                info: encodedLabel,
+                outputByteCount: outputSecretLength
+            )
+        }
     }
 
     mutating func deriveInitialSecrets(destinationCID: QUICConnectionID) {
