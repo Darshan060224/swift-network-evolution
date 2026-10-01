@@ -289,7 +289,7 @@ public struct Frame: ~Copyable {
         if adjustSingleIPAggregate && isSingleIPAggregate {
             guard fromEnd == 0 else {
                 #if !DisableErrorLogging
-                outlinedLogError("Trying to claim bytes at the end of a single-IP aggregate", fromEnd)
+                outlinedProtoLogError("Trying to claim bytes at the end of a single-IP aggregate", fromEnd)
                 #endif
                 return false
             }
@@ -301,7 +301,7 @@ public struct Frame: ~Copyable {
         guard newStart <= effectiveBufferLength - newEnd else {
             let effectiveLength = effectiveBufferLength
             #if !DisableErrorLogging
-            outlinedLogError(
+            outlinedProtoLogError(
                 "Claiming bytes failed, start is beyond end; start, effective length, end",
                 newStart,
                 effectiveLength,
@@ -325,7 +325,7 @@ public struct Frame: ~Copyable {
         if adjustSingleIPAggregate && isSingleIPAggregate {
             guard fromEnd == 0 else {
                 #if !DisableErrorLogging
-                outlinedLogError("Trying to unclaim bytes at the end of a single-IP aggregate", fromEnd)
+                outlinedProtoLogError("Trying to unclaim bytes at the end of a single-IP aggregate", fromEnd)
                 #endif
                 return false
             }
@@ -335,7 +335,7 @@ public struct Frame: ~Copyable {
         guard fromStart <= startOffset else {
             let startOffset = startOffset
             #if !DisableErrorLogging
-            outlinedLogError("Frame cannot unclaim start bytes; requested, remaining", fromStart, startOffset)
+            outlinedProtoLogError("Frame cannot unclaim start bytes; requested, remaining", fromStart, startOffset)
             #endif
             return false
         }
@@ -343,7 +343,7 @@ public struct Frame: ~Copyable {
         guard fromEnd <= endOffset else {
             let endOffset = endOffset
             #if !DisableErrorLogging
-            outlinedLogError("Frame cannot unclaim end bytes; requested, remaining", fromEnd, endOffset)
+            outlinedProtoLogError("Frame cannot unclaim end bytes; requested, remaining", fromEnd, endOffset)
             #endif
             return false
         }
@@ -645,14 +645,14 @@ public struct Frame: ~Copyable {
     var packetChainTotalLength: Int {
         get {
             guard isSingleIPAggregate else {
-                outlinedLogFault("Attempt to get aggregate buffer length on a non-single IP aggregate")
+                outlinedProtoLogFault("Attempt to get aggregate buffer length on a non-single IP aggregate")
                 return 0
             }
             return aggregateBufferLength
         }
         set {
             guard isSingleIPAggregate else {
-                outlinedLogFault("Attempt to set aggregate buffer length on a non-single IP aggregate")
+                outlinedProtoLogFault("Attempt to set aggregate buffer length on a non-single IP aggregate")
                 return
             }
             aggregateBufferLength = newValue
@@ -670,7 +670,7 @@ public struct Frame: ~Copyable {
             }
             guard newValue < 64 else {
                 #if !DisableErrorLogging
-                outlinedLogError("Cannot set DSCP value", newValue)
+                outlinedProtoLogError("Cannot set DSCP value", newValue)
                 #endif
                 return
             }
@@ -859,7 +859,7 @@ public struct Frame: ~Copyable {
             guard length >= 0 else { return }
             guard length <= aggregateBufferLength else {
                 let existingLength = aggregateBufferLength
-                outlinedLogFault(
+                outlinedProtoLogFault(
                     "Aggregate buffer length cannot remove requested bytes; existing, requested",
                     existingLength,
                     length

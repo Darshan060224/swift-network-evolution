@@ -96,7 +96,10 @@ extension Logger {
 //
 // Reporting through these helpers keeps the message, and the logging metadata and
 // once-initialisation with it, in one out-of-line place. Callers keep a compare and a branch.
-// The names say so: being out of line is the point, not an implementation detail.
+// The names say so: being out of line is the point, not an implementation detail. They also
+// name the category, because a helper that defaulted to one would quietly send a diagnostic
+// from another subsystem to the wrong place. Passing the `Logger` instead would materialise it
+// at the call site, which is the cost these helpers exist to avoid.
 //
 // The message is a `StaticString` so nothing is interpolated at the call site, and the values are
 // parameters rather than an autoclosure, which would put the interpolation back in the caller.
@@ -104,19 +107,19 @@ extension Logger {
 #if os(Linux) || (NETWORK_EMBEDDED && !NETWORK_DRIVERKIT) || canImport(os) || NETWORK_DRIVERKIT
 @available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 @inline(never)
-func outlinedLogError(_ message: StaticString) {
+func outlinedProtoLogError(_ message: StaticString) {
     Logger.proto.error("\(message)")
 }
 
 @available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 @inline(never)
-func outlinedLogError<Value: FixedWidthInteger>(_ message: StaticString, _ value: Value) {
+func outlinedProtoLogError<Value: FixedWidthInteger>(_ message: StaticString, _ value: Value) {
     Logger.proto.error("\(message): \(value)")
 }
 
 @available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 @inline(never)
-func outlinedLogError<First: FixedWidthInteger, Second: FixedWidthInteger>(
+func outlinedProtoLogError<First: FixedWidthInteger, Second: FixedWidthInteger>(
     _ message: StaticString,
     _ first: First,
     _ second: Second
@@ -126,7 +129,7 @@ func outlinedLogError<First: FixedWidthInteger, Second: FixedWidthInteger>(
 
 @available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 @inline(never)
-func outlinedLogError<First: FixedWidthInteger, Second: FixedWidthInteger, Third: FixedWidthInteger>(
+func outlinedProtoLogError<First: FixedWidthInteger, Second: FixedWidthInteger, Third: FixedWidthInteger>(
     _ message: StaticString,
     _ first: First,
     _ second: Second,
@@ -137,19 +140,19 @@ func outlinedLogError<First: FixedWidthInteger, Second: FixedWidthInteger, Third
 
 @available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 @inline(never)
-func outlinedLogFault(_ message: StaticString) {
+func outlinedProtoLogFault(_ message: StaticString) {
     Logger.proto.fault("\(message)")
 }
 
 @available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 @inline(never)
-func outlinedLogFault<Value: FixedWidthInteger>(_ message: StaticString, _ value: Value) {
+func outlinedProtoLogFault<Value: FixedWidthInteger>(_ message: StaticString, _ value: Value) {
     Logger.proto.fault("\(message): \(value)")
 }
 
 @available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 @inline(never)
-func outlinedLogFault<First: FixedWidthInteger, Second: FixedWidthInteger>(
+func outlinedProtoLogFault<First: FixedWidthInteger, Second: FixedWidthInteger>(
     _ message: StaticString,
     _ first: First,
     _ second: Second
@@ -159,7 +162,7 @@ func outlinedLogFault<First: FixedWidthInteger, Second: FixedWidthInteger>(
 
 @available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 @inline(never)
-func outlinedLogFault<First: FixedWidthInteger, Second: FixedWidthInteger, Third: FixedWidthInteger>(
+func outlinedProtoLogFault<First: FixedWidthInteger, Second: FixedWidthInteger, Third: FixedWidthInteger>(
     _ message: StaticString,
     _ first: First,
     _ second: Second,
@@ -170,7 +173,7 @@ func outlinedLogFault<First: FixedWidthInteger, Second: FixedWidthInteger, Third
 
 @available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 @inline(never)
-func outlinedLogInfo(_ message: StaticString) {
+func outlinedProtoLogInfo(_ message: StaticString) {
     Logger.proto.info("\(message)")
 }
 #endif

@@ -1027,7 +1027,7 @@ struct AckBitstring: ~Copyable {
         // The connection will stall if these two conditions occur.
         let initialWord = initialWord
         if _slowPath(startWord < initialWord) {
-            outlinedLogFault(
+            outlinedProtoLogFault(
                 "Initial word is lower than start; initial, start, packet number",
                 initialWord,
                 startWord,
@@ -1036,7 +1036,7 @@ struct AckBitstring: ~Copyable {
             return false
         }
         if _slowPath(stopWord < initialWord) {
-            outlinedLogFault(
+            outlinedProtoLogFault(
                 "Initial word is lower than stop; initial, stop, packet number",
                 initialWord,
                 stopWord,
@@ -1059,7 +1059,7 @@ struct AckBitstring: ~Copyable {
         let bitstringCount = UInt64(bitstring.count)
         let initialWord = initialWord
         if _slowPath(startWord > initialWord + bitstringCount) {
-            outlinedLogFault(
+            outlinedProtoLogFault(
                 "Bitstring size is lower than start; size, start, packet number",
                 bitstringCount + initialWord,
                 startWord,
@@ -1068,7 +1068,7 @@ struct AckBitstring: ~Copyable {
             return false
         }
         if _slowPath(stopWord > initialWord + bitstringCount) {
-            outlinedLogFault(
+            outlinedProtoLogFault(
                 "Bitstring size is lower than stop; size, stop, packet number",
                 bitstringCount + initialWord,
                 stopWord,
@@ -1090,7 +1090,7 @@ struct AckBitstring: ~Copyable {
 
         if stopWord >= size {
             guard _slowPath(stopWord < UInt32.max / 2) else {
-                outlinedLogInfo("Refusing to grow bitstring further")
+                outlinedProtoLogInfo("Refusing to grow bitstring further")
                 return
             }
             let targetSize = Int(stopWord) + 1
@@ -1136,7 +1136,7 @@ struct AckBitstring: ~Copyable {
         guard initialWord == other.initialWord else {
             let initialWord = self.initialWord
             let otherInitialWord = other.initialWord
-            outlinedLogFault("Bitstring initial mismatch; self, other", initialWord, otherInitialWord)
+            outlinedProtoLogFault("Bitstring initial mismatch; self, other", initialWord, otherInitialWord)
             return AckBitstringSequence.empty
         }
         if size > other.size {
