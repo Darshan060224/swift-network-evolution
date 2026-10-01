@@ -372,7 +372,11 @@ extension NetworkContext {
         /// Runs an immediate task. This task must not be run directly on the caller's stack, but otherwise
         /// no assumptions are made about how the task is run.
         func runImmediate(_ task: @escaping (() -> Void)) {
-            globals.queue.async(execute: DispatchWorkItem(block: task))
+            // Tasks are not `Sendable`; the queue is what serializes them, so the task is handed over
+            // unchecked. Wrapping it in a `DispatchWorkItem` would skip the check too, but costs a work
+            // item and a second block copy on every task.
+            nonisolated(unsafe) let task = task
+            globals.queue.async { task() }
         }
         /// Schedules a task to run after a delay, using a reference.
         func schedule(_ task: @escaping (() -> Void), after delay: NetworkDuration, reference: TimerReference) {
