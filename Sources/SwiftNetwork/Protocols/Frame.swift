@@ -288,9 +288,7 @@ public struct Frame: ~Copyable {
     public mutating func claim(fromStart: Int, fromEnd: Int = 0, adjustSingleIPAggregate: Bool = true) -> Bool {
         if adjustSingleIPAggregate && isSingleIPAggregate {
             guard fromEnd == 0 else {
-                #if !DisableErrorLogging
                 outlinedProtoLogError("Trying to claim bytes at the end of a single-IP aggregate", fromEnd)
-                #endif
                 return false
             }
             aggregateBufferLength -= fromStart
@@ -300,14 +298,12 @@ public struct Frame: ~Copyable {
         let newEnd = endOffset + fromEnd
         guard newStart <= effectiveBufferLength - newEnd else {
             let effectiveLength = effectiveBufferLength
-            #if !DisableErrorLogging
             outlinedProtoLogError(
                 "Claiming bytes failed, start is beyond end; start, effective length, end",
                 newStart,
                 effectiveLength,
                 newEnd
             )
-            #endif
             return false
         }
 
@@ -324,9 +320,7 @@ public struct Frame: ~Copyable {
     public mutating func unclaim(fromStart: Int, fromEnd: Int = 0, adjustSingleIPAggregate: Bool = true) -> Bool {
         if adjustSingleIPAggregate && isSingleIPAggregate {
             guard fromEnd == 0 else {
-                #if !DisableErrorLogging
                 outlinedProtoLogError("Trying to unclaim bytes at the end of a single-IP aggregate", fromEnd)
-                #endif
                 return false
             }
             aggregateBufferLength += fromStart
@@ -334,17 +328,13 @@ public struct Frame: ~Copyable {
 
         guard fromStart <= startOffset else {
             let startOffset = startOffset
-            #if !DisableErrorLogging
             outlinedProtoLogError("Frame cannot unclaim start bytes; requested, remaining", fromStart, startOffset)
-            #endif
             return false
         }
 
         guard fromEnd <= endOffset else {
             let endOffset = endOffset
-            #if !DisableErrorLogging
             outlinedProtoLogError("Frame cannot unclaim end bytes; requested, remaining", fromEnd, endOffset)
-            #endif
             return false
         }
 
@@ -669,9 +659,7 @@ public struct Frame: ~Copyable {
                 return
             }
             guard newValue < 64 else {
-                #if !DisableErrorLogging
                 outlinedProtoLogError("Cannot set DSCP value", newValue)
-                #endif
                 return
             }
             if ipPacketValues == nil {

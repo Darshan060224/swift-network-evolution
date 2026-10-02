@@ -103,77 +103,140 @@ extension Logger {
 //
 // The message is a `StaticString` so nothing is interpolated at the call site, and the values are
 // parameters rather than an autoclosure, which would put the interpolation back in the caller.
+//
+// `DisableErrorLogging` and `DisableDebugLogging` empty the body and switch the helper to
+// `@inline(always)`, so a disabled level leaves nothing at all behind.
 
 #if os(Linux) || (NETWORK_EMBEDDED && !NETWORK_DRIVERKIT) || canImport(os) || NETWORK_DRIVERKIT
-@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+#if DisableErrorLogging
+@inline(always)
+#else
 @inline(never)
+#endif
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 func outlinedProtoLogError(_ message: StaticString) {
+    #if !DisableErrorLogging
     Logger.proto.error("\(message)")
+    #endif
 }
 
-@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+#if DisableErrorLogging
+@inline(always)
+#else
 @inline(never)
-func outlinedProtoLogError<Value: FixedWidthInteger>(_ message: StaticString, _ value: Value) {
+#endif
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+func outlinedProtoLogError<Value: FixedWidthInteger>(
+    _ message: StaticString,
+    _ value: Value
+) {
+    #if !DisableErrorLogging
     Logger.proto.error("\(message): \(value)")
+    #endif
 }
 
-@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+#if DisableErrorLogging
+@inline(always)
+#else
 @inline(never)
+#endif
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 func outlinedProtoLogError<First: FixedWidthInteger, Second: FixedWidthInteger>(
     _ message: StaticString,
     _ first: First,
     _ second: Second
 ) {
+    #if !DisableErrorLogging
     Logger.proto.error("\(message): \(first), \(second)")
+    #endif
 }
 
-@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+#if DisableErrorLogging
+@inline(always)
+#else
 @inline(never)
+#endif
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 func outlinedProtoLogError<First: FixedWidthInteger, Second: FixedWidthInteger, Third: FixedWidthInteger>(
     _ message: StaticString,
     _ first: First,
     _ second: Second,
     _ third: Third
 ) {
+    #if !DisableErrorLogging
     Logger.proto.error("\(message): \(first), \(second), \(third)")
+    #endif
 }
 
-@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+#if DisableErrorLogging
+@inline(always)
+#else
 @inline(never)
+#endif
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 func outlinedProtoLogFault(_ message: StaticString) {
+    #if !DisableErrorLogging
     Logger.proto.fault("\(message)")
+    #endif
 }
 
-@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+#if DisableErrorLogging
+@inline(always)
+#else
 @inline(never)
-func outlinedProtoLogFault<Value: FixedWidthInteger>(_ message: StaticString, _ value: Value) {
+#endif
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+func outlinedProtoLogFault<Value: FixedWidthInteger>(
+    _ message: StaticString,
+    _ value: Value
+) {
+    #if !DisableErrorLogging
     Logger.proto.fault("\(message): \(value)")
+    #endif
 }
 
-@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+#if DisableErrorLogging
+@inline(always)
+#else
 @inline(never)
+#endif
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 func outlinedProtoLogFault<First: FixedWidthInteger, Second: FixedWidthInteger>(
     _ message: StaticString,
     _ first: First,
     _ second: Second
 ) {
+    #if !DisableErrorLogging
     Logger.proto.fault("\(message): \(first), \(second)")
+    #endif
 }
 
-@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+#if DisableErrorLogging
+@inline(always)
+#else
 @inline(never)
+#endif
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 func outlinedProtoLogFault<First: FixedWidthInteger, Second: FixedWidthInteger, Third: FixedWidthInteger>(
     _ message: StaticString,
     _ first: First,
     _ second: Second,
     _ third: Third
 ) {
+    #if !DisableErrorLogging
     Logger.proto.fault("\(message): \(first), \(second), \(third)")
+    #endif
 }
 
-@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
+#if DisableDebugLogging
+@inline(always)
+#else
 @inline(never)
+#endif
+@available(macOS 11, iOS 14, tvOS 14, watchOS 7, *)
 func outlinedProtoLogInfo(_ message: StaticString) {
+    #if !DisableDebugLogging
     Logger.proto.info("\(message)")
+    #endif
 }
 #endif
