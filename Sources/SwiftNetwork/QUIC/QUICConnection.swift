@@ -5701,6 +5701,7 @@ extension QUICConnection {
         // to flush frames. Suppress those nested flushes for the duration of the
         // `recovery` borrow below, then perform one flush afterwards if any were
         // requested.
+        let wasBorrowing = isBorrowingRecoveryAckState
         isBorrowingRecoveryAckState = true
         recovery.receivedAck(
             ack: frame,
@@ -5715,8 +5716,8 @@ extension QUICConnection {
         recovery.recordSentPackets(&sentPackets, connection: self, in: &eventContext)
 
         // The borrow of `recovery` has ended, so it is safe to flush again.
-        isBorrowingRecoveryAckState = false
-        if deferredSendFramesRequested {
+        isBorrowingRecoveryAckState = wasBorrowing
+        if !wasBorrowing, deferredSendFramesRequested {
             deferredSendFramesRequested = false
             sendFrames(in: &eventContext)
         }
