@@ -126,6 +126,21 @@ struct Migration: ~Copyable {
         let oldPath = connection.currentPath
         connection.log.notice("Migrating to path \(path.pathIdentifier)")
         connection.currentPath = path
+        if let localEndpoint = path.localEndpoint, let remoteEndpoint = path.remoteEndpoint,
+            case .address(let localAddress) = localEndpoint.type,
+            case .address(let remoteAddress) = remoteEndpoint.type
+        {
+            let pathInfo = QUICPathInfo(
+                isValidated: path.isValidated,
+                remote: remoteAddress,
+                local: localAddress
+            )
+            connection.deliverNetworkProtocolEvent(
+                flow: .allFlows,
+                event: .init(quicEvent: .pathCurrent(pathInfo)),
+                in: &eventContext
+            )
+        }
         path.spinValue = connection.initialSpinValue
         connection.recovery.resetTimer(now: connection.now, connection: connection, in: &eventContext)
         path.resetPacer()
