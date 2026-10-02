@@ -208,12 +208,12 @@ class QUICTestHarness {
             clientBridgeOptions.datagramDrops = clientDrops
             clientParameters.defaultStack.link = .custom(clientBridgeOptions)
 
-            var clientPath: PathProperties
+            var clientPath = PathProperties(parameters: clientParameters)
             if clientMTU == 1500 {
-                clientPath = PathProperties(parameters: clientParameters)
                 clientPath.effectiveMTU = 1500
             } else {
-                clientPath = PathProperties(parameters: clientParameters)
+                #if !NETWORK_PRIVATE
+                // Note that this reaches cross module on an internal property
                 clientPath.directInterface = Interface(
                     index: 1,
                     name: "lo0",
@@ -221,6 +221,7 @@ class QUICTestHarness {
                     subtype: .other,
                     mtu: clientMTU
                 )
+                #endif
                 clientPath.effectiveMTU = UInt32(clientMTU)
             }
 
@@ -255,12 +256,12 @@ class QUICTestHarness {
             serverBridgeOptions.datagramDrops = serverDrops
             serverParameters.defaultStack.link = .custom(serverBridgeOptions)
 
-            var serverPath: PathProperties
+            var serverPath = PathProperties(parameters: serverParameters)
             if serverMTU == 1500 {
-                serverPath = PathProperties(parameters: serverParameters)
                 serverPath.effectiveMTU = 1500
             } else {
-                serverPath = PathProperties(parameters: serverParameters)
+                #if !NETWORK_PRIVATE
+                // Note that this reaches cross module on an internal property
                 serverPath.directInterface = Interface(
                     index: 1,
                     name: "lo0",
@@ -268,6 +269,7 @@ class QUICTestHarness {
                     subtype: .other,
                     mtu: serverMTU
                 )
+                #endif
                 serverPath.effectiveMTU = UInt32(serverMTU)
             }
 
