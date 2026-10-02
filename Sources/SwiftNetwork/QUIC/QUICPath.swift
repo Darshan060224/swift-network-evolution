@@ -494,13 +494,7 @@ public final class QUICPath: MultiplexingDatagramPath<
             self.congestionControl = .ledbat(algorithm: ledbat)
         case .ledbat:
             if background { return }  // Nothing to do, already background
-            self.congestionControl = .ledbat(
-                algorithm: Ledbat(
-                    mss: self.initialMSS,
-                    qlog: parentProtocol.qLog,
-                    logPrefixer: self.log
-                )
-            )
+            // Inherit from the current LEDBAT so bytes in flight (and the window) carry over.
             var cubic = Cubic(
                 pacer: &self.pacer,
                 mss: self.initialMSS,
@@ -795,7 +789,7 @@ extension QUICPath {
 
     @inline(always)
     func congestionControlSpuriousRetransmit(qlog: QLog? = nil) {
-        congestionControl?.spuriousRetransmit()
+        congestionControl?.spuriousRetransmit(qlog: qlog)
     }
 
     @inline(always)
@@ -819,52 +813,20 @@ extension QUICPath {
         smoothedRTT: NetworkDuration,
         qlog: QLog? = nil
     ) {
-        guard congestionControl != nil else { return }
         // ECN accounting doesn't repace this path, so there is no path to hand down.
         let unpacedPath: QUICPath? = nil
-        switch congestionControl! {
-        case .cubic(var cubic):
-            cubic.processECN(
-                path: unpacedPath,
-                ceCount: ceCount,
-                packetsAcked: packetsAcked,
-                largestSentPN: largestSentPN,
-                largestAckedPN: largestAckedPN,
-                largestAckedSentTime: largestAckedSentTime,
-                mss: mss,
-                smoothedRTT: smoothedRTT,
-                now: parentProtocol.now,
-                qlog: qlog
-            )
-        #if !NETWORK_EMBEDDED
-        case .ledbat(var ledbat):
-            ledbat.processECN(
-                path: unpacedPath,
-                ceCount: ceCount,
-                packetsAcked: packetsAcked,
-                largestSentPN: largestSentPN,
-                largestAckedPN: largestAckedPN,
-                largestAckedSentTime: largestAckedSentTime,
-                mss: mss,
-                smoothedRTT: smoothedRTT,
-                now: parentProtocol.now,
-                qlog: qlog
-            )
-        case .prague(var prague):
-            prague.processECN(
-                path: unpacedPath,
-                ceCount: ceCount,
-                packetsAcked: packetsAcked,
-                largestSentPN: largestSentPN,
-                largestAckedPN: largestAckedPN,
-                largestAckedSentTime: largestAckedSentTime,
-                mss: mss,
-                smoothedRTT: smoothedRTT,
-                now: parentProtocol.now,
-                qlog: qlog
-            )
-        #endif
-        }
+        congestionControl?.processECN(
+            path: unpacedPath,
+            ceCount: ceCount,
+            packetsAcked: packetsAcked,
+            largestSentPN: largestSentPN,
+            largestAckedPN: largestAckedPN,
+            largestAckedSentTime: largestAckedSentTime,
+            mss: mss,
+            smoothedRTT: smoothedRTT,
+            now: parentProtocol.now,
+            qlog: qlog
+        )
     }
 
     @inline(always)
