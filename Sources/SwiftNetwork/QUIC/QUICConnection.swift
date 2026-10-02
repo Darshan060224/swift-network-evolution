@@ -3850,13 +3850,6 @@ public final class QUICConnection: ManyToManyApplicationStreamProtocol,
             )
             path.addPendingItems(&pendingItems, now: startSendingTimestamp, in: &eventContext)
             var datagramBatch = FrameArray()
-            if self.flowControlState.pendingOutboundBytesToSend > 0 && availableCongestionWindow > 0 {
-                datagramBatch = buildOutboundFrameBatch(
-                    availableCongestionWindow: (availableCongestionWindow - totalSendBytes),
-                    applicationPendingItems: &applicationPendingItems,
-                    in: &eventContext
-                )
-            }
             let success = buildSinglePacketForKeyState(
                 self.keyState,
                 pendingItems: &pendingItems,
