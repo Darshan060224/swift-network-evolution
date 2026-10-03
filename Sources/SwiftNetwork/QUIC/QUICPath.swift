@@ -396,10 +396,26 @@ public final class QUICPath: MultiplexingDatagramPath<
         )
     }
 
-    func assignDCID(_ dcid: QUICConnectionID) {
+    func assignDCID(_ dcid: QUICConnectionID, in eventContext: inout NetworkContext.EventContext) {
         self.dcid = dcid
         if case .routeEstablished = state {
             changeState(to: .cidAssigned)
+            if let localEndpoint, let remoteEndpoint,
+                case .address(let localAddress) = localEndpoint.type,
+                case .address(let remoteAddress) = remoteEndpoint.type
+            {
+                // If the cid is now assigned we can send and receive on the path
+                let pathInfo = QUICPathInfo(
+                    isValidated: self.isValidated,
+                    remote: remoteAddress,
+                    local: localAddress
+                )
+                parentProtocol.deliverNetworkProtocolEvent(
+                    flow: .allFlows,
+                    event: .init(quicEvent: .pathCIDAssigned(pathInfo)),
+                    in: &eventContext
+                )
+            }
         }
         log.datapath(
             "Assigning DCID \(dcid.description) to path ID \(self.pathIdentifier)"
@@ -500,6 +516,7 @@ public final class QUICPath: MultiplexingDatagramPath<
             )
         case .ledbat:
             if background { return }  // Nothing to do, already background
+            // Inherit from the current LEDBAT so bytes in flight (and the window) carry over.
             let oldState = self.congestionControl.state
             var newState = CongestionControlState()
             var cubic = Cubic(
@@ -545,20 +562,20 @@ public final class QUICPath: MultiplexingDatagramPath<
         #endif
     }
 
-    func handlePathChallenge(_ challenge: UInt64) {
+    func handlePathChallenge(_ challenge: UInt64, in eventContext: inout NetworkContext.EventContext) {
         log.debug("Path challenge received: \(challenge)")
 
         // Save the challenge, to schedule a response
         pendingInboundChallenges.append(challenge)
 
         // Initiate probing if needed
-        beginValidation()
+        beginValidation(in: &eventContext)
     }
 
-    func beginValidation(ifNecessary: Bool = true) {
+    func beginValidation(ifNecessary: Bool = true, in eventContext: inout NetworkContext.EventContext) {
         if case .routeEstablished = state {
             // The route is established, but needs CID allocation
-            guard parentProtocol.assignNewDCID(to: self) else {
+            guard parentProtocol.assignNewDCID(to: self, in: &eventContext) else {
                 log.error("Failed to assign remote CID to path")
                 return
             }
@@ -808,7 +825,7 @@ extension QUICPath {
 
     @inline(always)
     func congestionControlSpuriousRetransmit(qlog: QLog? = nil) {
-        congestionControl.spuriousRetransmit()
+        congestionControl.spuriousRetransmit(qlog: qlog)
     }
 
     @inline(always)
