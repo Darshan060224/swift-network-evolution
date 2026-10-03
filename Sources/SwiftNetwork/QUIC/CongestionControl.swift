@@ -258,10 +258,19 @@ struct CongestionControl: ~Copyable {
     var log: LogPrefixer
     var algorithm: Algorithm
 
-    init(state: CongestionControlState = CongestionControlState(), log: LogPrefixer, algorithm: Algorithm) {
+    init(state: CongestionControlState = CongestionControlState(), algorithm: Algorithm) {
         self.state = state
-        self.log = log
         self.algorithm = algorithm
+        switch algorithm {
+        case .cubic(let cubic):
+            self.log = cubic.log
+        #if !NETWORK_EMBEDDED
+        case .ledbat(let ledbat):
+            self.log = ledbat.log
+        case .prague(let prague):
+            self.log = prague.log
+        #endif
+        }
     }
 
     static func createCubic(
@@ -272,14 +281,14 @@ struct CongestionControl: ~Copyable {
     ) -> CongestionControl {
         var state = CongestionControlState()
         let cubic = Cubic(state: &state, pacer: &pacer, mss: mss, qlog: qlog, logPrefixer: logPrefixer)
-        return CongestionControl(state: state, log: logPrefixer, algorithm: .cubic(algorithm: cubic))
+        return CongestionControl(state: state, algorithm: .cubic(algorithm: cubic))
     }
 
     #if !NETWORK_EMBEDDED
     static func createLedbat(mss: Int, qlog: QLog? = nil, logPrefixer: LogPrefixer) -> CongestionControl {
         var state = CongestionControlState()
         let ledbat = Ledbat(state: &state, mss: mss, qlog: qlog, logPrefixer: logPrefixer)
-        return CongestionControl(state: state, log: logPrefixer, algorithm: .ledbat(algorithm: ledbat))
+        return CongestionControl(state: state, algorithm: .ledbat(algorithm: ledbat))
     }
 
     static func createPrague(
@@ -290,7 +299,7 @@ struct CongestionControl: ~Copyable {
     ) -> CongestionControl {
         var state = CongestionControlState()
         let prague = Prague(state: &state, pacer: &pacer, mss: mss, qlog: qlog, logPrefixer: logPrefixer)
-        return CongestionControl(state: state, log: logPrefixer, algorithm: .prague(algorithm: prague))
+        return CongestionControl(state: state, algorithm: .prague(algorithm: prague))
     }
     #endif
 

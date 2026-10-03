@@ -511,7 +511,6 @@ public final class QUICPath: MultiplexingDatagramPath<
             )
             self.congestionControl = CongestionControl(
                 state: newState,
-                log: self.log,
                 algorithm: .ledbat(algorithm: ledbat)
             )
         case .ledbat:
@@ -534,7 +533,6 @@ public final class QUICPath: MultiplexingDatagramPath<
             )
             self.congestionControl = CongestionControl(
                 state: newState,
-                log: self.log,
                 algorithm: .cubic(algorithm: cubic)
             )
         case .prague:
@@ -555,7 +553,6 @@ public final class QUICPath: MultiplexingDatagramPath<
             )
             self.congestionControl = CongestionControl(
                 state: newState,
-                log: self.log,
                 algorithm: .ledbat(algorithm: ledbat)
             )
         }
