@@ -13,10 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #if IMPORT_SWIFTTLS && canImport(SwiftTLS)
+// `@preconcurrency` because `SwiftTLSOptions` is not yet `Sendable`, so `SwiftTLSProtocolOptions` cannot be checked under
+// `EXPORT_SWIFTTLS`. Drop it once swift-tls declares the conformance.
 #if EXPORT_SWIFTTLS
-@_spi(SwiftTLSOptions) @_spi(SwiftTLSProtocol) import SwiftTLS
+@preconcurrency @_spi(SwiftTLSOptions) @_spi(SwiftTLSProtocol) import SwiftTLS
 #else
-@_spi(SwiftTLSOptions) @_spi(SwiftTLSProtocol) @_weakLinked internal import SwiftTLS
+@preconcurrency @_spi(SwiftTLSOptions) @_spi(SwiftTLSProtocol) @_weakLinked internal import SwiftTLS
 #endif
 #endif
 
@@ -72,7 +74,7 @@ public struct SwiftTLSProtocol: NetworkProtocol {
 
     public init() {}
 
-    public struct SwiftTLSProtocolOptions: PerProtocolOptions {
+    public struct SwiftTLSProtocolOptions: PerProtocolOptions, Sendable {
         private var _tlsOptions = SwiftTLSOptionsStorage()
 
         #if EXPORT_SWIFTTLS
@@ -87,7 +89,7 @@ public struct SwiftTLSProtocol: NetworkProtocol {
             _tlsOptions.externalPSK = .init(externalIdentity: identity, epsk: .init(data: epsk))
         }
         #else
-        private struct SwiftTLSOptionsStorage {
+        private struct SwiftTLSOptionsStorage: Sendable {
             var serverName: String?
             var quicTransportParameters: [UInt8]?
             var applicationProtocols: [String]?
