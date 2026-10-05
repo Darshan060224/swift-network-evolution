@@ -271,36 +271,6 @@ struct CongestionControl: ~Copyable {
         }
     }
 
-    static func createCubic(
-        pacer: inout Pacer,
-        mss: Int,
-        qlog: QLog? = nil,
-        logPrefixer: LogPrefixer
-    ) -> CongestionControl {
-        var state = CongestionControlState()
-        let cubic = Cubic(state: &state, pacer: &pacer, mss: mss, qlog: qlog, logPrefixer: logPrefixer)
-        return CongestionControl(state: state, algorithm: .cubic(algorithm: cubic))
-    }
-
-    #if !NETWORK_EMBEDDED
-    static func createLedbat(mss: Int, qlog: QLog? = nil, logPrefixer: LogPrefixer) -> CongestionControl {
-        var state = CongestionControlState()
-        let ledbat = Ledbat(state: &state, mss: mss, qlog: qlog, logPrefixer: logPrefixer)
-        return CongestionControl(state: state, algorithm: .ledbat(algorithm: ledbat))
-    }
-
-    static func createPrague(
-        pacer: inout Pacer,
-        mss: Int,
-        qlog: QLog? = nil,
-        logPrefixer: LogPrefixer
-    ) -> CongestionControl {
-        var state = CongestionControlState()
-        let prague = Prague(state: &state, pacer: &pacer, mss: mss, qlog: qlog, logPrefixer: logPrefixer)
-        return CongestionControl(state: state, algorithm: .prague(algorithm: prague))
-    }
-    #endif
-
     var congestionWindow: UInt64 {
         state.congestionWindow
     }

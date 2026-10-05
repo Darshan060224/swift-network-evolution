@@ -339,12 +339,15 @@ public final class QUICPath: MultiplexingDatagramPath<
         self.pacer = Pacer()
         // Overwritten with the real mss/qlog once `setup()` runs; RX/TX aren't allowed on a
         // path until then, so this placeholder is never observed.
-        self.congestionControl = CongestionControl.createCubic(
+        var congestionControlState = CongestionControlState()
+        let cubic = Cubic(
+            state: &congestionControlState,
             pacer: &self.pacer,
             mss: 0,
             qlog: nil,
             logPrefixer: parent.logPrefixer
         )
+        self.congestionControl = CongestionControl(state: congestionControlState, algorithm: .cubic(algorithm: cubic))
         super.init(parent: parent, in: &eventContext)
     }
 
@@ -379,12 +382,15 @@ public final class QUICPath: MultiplexingDatagramPath<
 
         let pacerEnabled = (pacePackets || QUICPreferences.shared.pacePackets)
         self.pacer = Pacer(enabled: pacerEnabled)
-        self.congestionControl = .createCubic(
+        var congestionControlState = CongestionControlState()
+        let cubic = Cubic(
+            state: &congestionControlState,
             pacer: &self.pacer,
             mss: self.initialMSS,
             qlog: parentProtocol.qLog,
             logPrefixer: self.log
         )
+        self.congestionControl = CongestionControl(state: congestionControlState, algorithm: .cubic(algorithm: cubic))
 
         self.spinValue = parentProtocol.initialSpinValue
     }
@@ -446,25 +452,43 @@ public final class QUICPath: MultiplexingDatagramPath<
     func resetCongestionControl() {
         switch self.congestionControl.algorithm {
         case .cubic:
-            self.congestionControl = .createCubic(
+            var congestionControlState = CongestionControlState()
+            let cubic = Cubic(
+                state: &congestionControlState,
                 pacer: &self.pacer,
                 mss: self.initialMSS,
                 qlog: parentProtocol.qLog,
                 logPrefixer: self.log
+            )
+            self.congestionControl = CongestionControl(
+                state: congestionControlState,
+                algorithm: .cubic(algorithm: cubic)
             )
         #if !NETWORK_EMBEDDED
         case .ledbat:
-            self.congestionControl = .createLedbat(
+            var congestionControlState = CongestionControlState()
+            let ledbat = Ledbat(
+                state: &congestionControlState,
                 mss: self.initialMSS,
                 qlog: parentProtocol.qLog,
                 logPrefixer: self.log
             )
+            self.congestionControl = CongestionControl(
+                state: congestionControlState,
+                algorithm: .ledbat(algorithm: ledbat)
+            )
         case .prague:
-            self.congestionControl = .createPrague(
+            var congestionControlState = CongestionControlState()
+            let prague = Prague(
+                state: &congestionControlState,
                 pacer: &self.pacer,
                 mss: self.initialMSS,
                 qlog: parentProtocol.qLog,
                 logPrefixer: self.log
+            )
+            self.congestionControl = CongestionControl(
+                state: congestionControlState,
+                algorithm: .prague(algorithm: prague)
             )
         #endif
         }
