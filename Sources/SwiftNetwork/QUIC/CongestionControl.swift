@@ -39,15 +39,13 @@ struct CongestionControlState {
     var prevSlowStartThreshold = UInt64.max
     var recoveryStartTime = NetworkClock.Instant.zero
     var bytesAcked = UInt64(0)
-    var pipeAckSamples = [UInt64(0)]
+    var pipeAckSamples = Array(repeating: UInt64(0), count: congestionWindowValidationSamples)
     var pipeAckValue = UInt64(0)
     var pipeAckSampleEnd = NetworkClock.Instant.zero
     var pipeAckAcked = UInt64(0)
     var pipeAckIndex = 0
 
-    var congestionWindowValidationSamples: Int {
-        3
-    }
+    static let congestionWindowValidationSamples = 3
 
     var availableCongestionWindow: UInt64 {
         if congestionWindow > bytesInFlight {
@@ -156,7 +154,7 @@ struct CongestionControlState {
     }
 
     mutating func initPipeAckSamples() {
-        pipeAckSamples = Array(repeating: 0, count: congestionWindowValidationSamples)
+        pipeAckSamples = Array(repeating: 0, count: Self.congestionWindowValidationSamples)
         pipeAckIndex = 0
         pipeAckValue = 0
     }
@@ -164,7 +162,7 @@ struct CongestionControlState {
     mutating func setPipeAckSample(sample: UInt64) {
         pipeAckSamples[pipeAckIndex] = sample
         pipeAckIndex &+= 1
-        pipeAckIndex = pipeAckIndex % congestionWindowValidationSamples
+        pipeAckIndex = pipeAckIndex % Self.congestionWindowValidationSamples
     }
 
     mutating func pipeAckNewRound(target: NetworkClock.Instant) {
@@ -175,7 +173,7 @@ struct CongestionControlState {
     mutating func updatePipeAckSamples() {
         setPipeAckSample(sample: pipeAckAcked)
         pipeAckValue = pipeAckAcked
-        for index in 0..<congestionWindowValidationSamples {
+        for index in 0..<Self.congestionWindowValidationSamples {
             if pipeAckSamples[index] > pipeAckValue {
                 pipeAckValue = pipeAckSamples[index]
             }
