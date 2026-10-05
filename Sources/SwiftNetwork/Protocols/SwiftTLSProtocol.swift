@@ -13,12 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #if IMPORT_SWIFTTLS && canImport(SwiftTLS)
-// `@preconcurrency` because `SwiftTLSOptions` is not yet `Sendable`, so `SwiftTLSProtocolOptions` cannot be checked under
-// `EXPORT_SWIFTTLS`. Drop it once swift-tls declares the conformance.
 #if EXPORT_SWIFTTLS
-@preconcurrency @_spi(SwiftTLSOptions) @_spi(SwiftTLSProtocol) import SwiftTLS
+@_spi(SwiftTLSOptions) @_spi(SwiftTLSProtocol) import SwiftTLS
 #else
-@preconcurrency @_spi(SwiftTLSOptions) @_spi(SwiftTLSProtocol) @_weakLinked internal import SwiftTLS
+@_spi(SwiftTLSOptions) @_spi(SwiftTLSProtocol) @_weakLinked internal import SwiftTLS
 #endif
 #endif
 
@@ -74,7 +72,7 @@ public struct SwiftTLSProtocol: NetworkProtocol {
 
     public init() {}
 
-    public struct SwiftTLSProtocolOptions: PerProtocolOptions, Sendable {
+    public struct SwiftTLSProtocolOptions: PerProtocolOptions {
         private var _tlsOptions = SwiftTLSOptionsStorage()
 
         #if EXPORT_SWIFTTLS
@@ -1312,6 +1310,13 @@ public struct SwiftTLSProtocol: NetworkProtocol {
     #endif
 
 }
+
+#if !EXPORT_SWIFTTLS
+// Under `EXPORT_SWIFTTLS` the options store a `SwiftTLSOptions`, which is not `Sendable`, so the options can only be
+// `Sendable` when they hold their own copy of the fields.
+@available(Network 0.1.0, *)
+extension SwiftTLSProtocol.SwiftTLSProtocolOptions: Sendable {}
+#endif
 
 @_spi(ProtocolProvider)
 @available(Network 0.1.0, *)
