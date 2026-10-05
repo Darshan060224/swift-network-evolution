@@ -26,6 +26,9 @@ internal import CryptoKit
 // `openInPlaceThroughSealedBox`, which go through a `SealedBox` and copy the result back. The entry points need names
 // of their own: a wrapper named after the span-based API would shadow it throughout the module, and every call would
 // take the copying path even where the OS has the real one.
+//
+// CryptoKit first declares that API in the 27 SDKs, as module version 383.2.1. A build against an older SDK must not
+// compile the call at all, since `#available` only chooses at run time; those builds always take the fallback.
 
 // Availability due to `SwiftCrypto`'s `AES.GCM`
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
@@ -40,7 +43,7 @@ extension AES.GCM {
         #if DISABLE_SHIM_CRYPTO_SPAN_APIS
         try seal(inPlace: &message, using: key, nonce: nonce, authenticating: authenticatedData, tag: &tag)
         #else
-        #if canImport(CryptoKit)
+        #if canImport(CryptoKit, _version: 383.2.1)
         if #available(macOS 27, iOS 27, watchOS 27, tvOS 27, visionOS 27, *) {
             try seal(inPlace: &message, using: key, nonce: nonce, authenticating: authenticatedData, tag: &tag)
             return
@@ -66,7 +69,7 @@ extension AES.GCM {
         #if DISABLE_SHIM_CRYPTO_SPAN_APIS
         try open(inPlace: &message, using: key, nonce: nonce, authenticating: authenticatedData, tag: tag)
         #else
-        #if canImport(CryptoKit)
+        #if canImport(CryptoKit, _version: 383.2.1)
         if #available(macOS 27, iOS 27, watchOS 27, tvOS 27, visionOS 27, *) {
             try open(inPlace: &message, using: key, nonce: nonce, authenticating: authenticatedData, tag: tag)
             return
@@ -90,7 +93,7 @@ extension ChaChaPoly {
         #if DISABLE_SHIM_CRYPTO_SPAN_APIS
         try seal(inPlace: &message, using: key, nonce: nonce, authenticating: authenticatedData, tag: &tag)
         #else
-        #if canImport(CryptoKit)
+        #if canImport(CryptoKit, _version: 383.2.1)
         if #available(macOS 27, iOS 27, watchOS 27, tvOS 27, visionOS 27, *) {
             try seal(inPlace: &message, using: key, nonce: nonce, authenticating: authenticatedData, tag: &tag)
             return
@@ -116,7 +119,7 @@ extension ChaChaPoly {
         #if DISABLE_SHIM_CRYPTO_SPAN_APIS
         try open(inPlace: &message, using: key, nonce: nonce, authenticating: authenticatedData, tag: tag)
         #else
-        #if canImport(CryptoKit)
+        #if canImport(CryptoKit, _version: 383.2.1)
         if #available(macOS 27, iOS 27, watchOS 27, tvOS 27, visionOS 27, *) {
             try open(inPlace: &message, using: key, nonce: nonce, authenticating: authenticatedData, tag: tag)
             return
