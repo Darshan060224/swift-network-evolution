@@ -206,11 +206,15 @@ extension UnsafeRawBufferPointer {
             var word: UInt64 = 0
             if byteCount >= 4 {
                 let low = UInt32(littleEndian: baseAddress.loadUnaligned(as: UInt32.self))
-                let high = UInt32(littleEndian: baseAddress.loadUnaligned(fromByteOffset: byteCount &- 4, as: UInt32.self))
+                let high = UInt32(
+                    littleEndian: baseAddress.loadUnaligned(fromByteOffset: byteCount &- 4, as: UInt32.self)
+                )
                 word = UInt64(low) | ((UInt64(high) &>> UInt64(truncatingIfNeeded: (8 &- byteCount) &* 8)) &<< 32)
             } else if byteCount >= 2 {
                 let low = UInt16(littleEndian: baseAddress.loadUnaligned(as: UInt16.self))
-                let high = UInt16(littleEndian: baseAddress.loadUnaligned(fromByteOffset: byteCount &- 2, as: UInt16.self))
+                let high = UInt16(
+                    littleEndian: baseAddress.loadUnaligned(fromByteOffset: byteCount &- 2, as: UInt16.self)
+                )
                 word = UInt64(low) | ((UInt64(high) &>> UInt64(truncatingIfNeeded: (4 &- byteCount) &* 8)) &<< 16)
             } else if byteCount == 1 {
                 word = UInt64(baseAddress.load(as: UInt8.self))
